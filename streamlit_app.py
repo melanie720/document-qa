@@ -1,11 +1,6 @@
 import streamlit as st
 from openai import OpenAI, OpenAIError
 
-st.markdown(
-    "<style>.block-container {max-width: 700px; padding-top: 3rem;}</style>",
-    unsafe_allow_html=True,
-)
-
 # Show title and description.
 st.title("📄 Mel's Document Q&A")
 st.caption("Upload a text file and ask a question about it.")
