@@ -1,53 +1,62 @@
 import streamlit as st
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 
-# Show title and description.
-st.title("My Document QA App")
-st.write(
-    "Upload a document below and ask a question about it!  " 
-    "\nJust provide an OpenAI API key."
+st.markdown(
+    "<style>.block-container {max-width: 700px; padding-top: 3rem;}</style>",
+    unsafe_allow_html=True,
 )
 
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.")
-else:
+# Show title and description.
+st.title("📄 Mel's Document Q&A")
+st.caption("Upload a text file and ask a question about it.")
 
+# Ask user for their OpenAI API key via `st.text_input`.
+openai_api_key = st.text_input("Enter your OpenAI API Key:", type="password")
+
+if not openai_api_key:
+    st.info("Add your OpenAI API key and press Enter.", icon="🔑")
+else:
     # Create an OpenAI client.
     client = OpenAI(api_key=openai_api_key)
 
-    # Let the user upload a file via `st.file_uploader`.
-    uploaded_file = st.file_uploader(
-        "Upload a document (.txt or .md)", type=("txt", "md")
-    )
+    try:
+        client.models.list()
 
-    # Ask the user for a question via `st.text_area`.
-    question = st.text_area(
-        "Now ask a question about the document!",
-        placeholder="Can you give me a short summary?",
-        disabled=not uploaded_file,
-    )
+        # Let the user upload a file via `st.file_uploader`.
+        uploaded_file = st.file_uploader("Document (.txt or .md)", type=("txt", "md"))
 
-    if uploaded_file and question:
-
-        # Process the uploaded file and question.
-        document = uploaded_file.read().decode()
-        messages = [
-            {
-                "role": "user",
-                "content": f"Here's a document: {document} \n\n---\n\n {question}",
-            }
-        ]
-
-        # Generate an answer using the OpenAI API.
-        stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            stream=True,
+        # Ask the user for a question via `st.text_area`.
+        question = st.text_area(
+            "Your question",
+            placeholder="Ex. What are the main points in this document?",
+            disabled=not uploaded_file,
         )
 
-        # Stream the response to the app using `st.write_stream`.
-        st.write_stream(stream)
+        # Added a button:
+        if st.button("Get answer", type="primary", disabled=not uploaded_file):
+            if not question:
+                st.warning("Type a question first.")
+            else:
+                # Process the uploaded file and question.
+                document = uploaded_file.read().decode()
+                messages = [
+                    {
+                        "role": "user",
+                        "content": f"Here's a document: {document} \n\n---\n\n {question}",
+                    }
+                ]
+
+                # Needed a spinner:
+                with st.spinner("Reading your document...", show_time=True):
+                    # Generate an answer using the OpenAI API.
+                    stream = client.chat.completions.create(
+                        model="gpt-5-nano",
+                        messages=messages,
+                        stream=True,
+                    )
+
+                    # Stream the response to the app using `st.write_stream`.
+                    st.write_stream(stream)
+
+    except OpenAIError:
+        st.error("That key didn't work. Check it and try again.")
